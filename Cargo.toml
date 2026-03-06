@@ -8,4 +8,5 @@ sha2 = "0.11.0-rc.5"
 hex = "0.4.3"
 serde = {version = "1.0.228",features = ["derive"]}  #核心库
 serde_json = "1.0.149"  #json支持
+ed25519-dalek = "3.0.0-pre.6"
 
