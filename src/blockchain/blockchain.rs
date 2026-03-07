@@ -1,11 +1,10 @@
-use crate::account::AccountManager;
-use crate::block::Block;
-use crate::transaction::Transaction;
+
 use ed25519_dalek::Signature;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::fs;
+use crate::blockchain::{AccountManager, Block, Transaction};
 // 从 block 模块导入 Block
 
 //区块链结构体

@@ -1,13 +1,12 @@
-mod account;
-mod block; // 声明 block 模块 → 对应 src/block.rs
+
 mod blockchain;
-mod transaction;
+mod crypto;
 // 声明 blockchain 模块 → 对应 src/blockchain.rs
 
 use std::fmt::Display;
 // use crate::block::Block;
-use crate::blockchain::BlockChain;
-use crate::transaction::Transaction;
+use crate::blockchain::{BlockChain, Transaction};
+
 // 从 blockchain 模块导入 BlockChain
 
 // fn main() {

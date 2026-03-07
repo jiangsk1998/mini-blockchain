@@ -1,8 +1,10 @@
-use crate::transaction::Transaction;
+
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fmt::{Display, Formatter};
 use std::time::{SystemTime, UNIX_EPOCH};
+use crate::blockchain::Transaction;
+use crate::crypto::hash::sha256_hash;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Block {
@@ -30,8 +32,9 @@ impl Block {
     ) -> String {
         let tx_json = serde_json::to_string(&transactions).unwrap();
         let input = format!("{}{}{}{}{}{}", index, timestamp, tx_json, prev_hash, nonce,miner);
-        let hash = Sha256::digest(input.as_bytes());
-        hex::encode(hash)
+        // let hash = Sha256::digest(input.as_bytes());
+        // hex::encode(hash)
+        sha256_hash(input.as_bytes())
     }
 }
 
