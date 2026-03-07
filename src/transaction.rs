@@ -2,6 +2,8 @@ use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+pub const FEE_RATE: u64 =  100;
+
 mod signature_serde {
     use ed25519_dalek::Signature;
     use serde::{Deserialize, Deserializer, Serializer};
@@ -21,7 +23,8 @@ mod signature_serde {
         // 从十六进制字符串解码为字节数组，再转为 Signature
         let s = String::deserialize(deserializer)?;
         let bytes = hex::decode(&s).map_err(serde::de::Error::custom)?;
-        let arr: [u8; 64] = bytes.try_into()
+        let arr: [u8; 64] = bytes
+            .try_into()
             .map_err(|_| serde::de::Error::custom("签名长度错误"))?;
         Ok(Signature::from_bytes(&arr))
     }
@@ -29,13 +32,16 @@ mod signature_serde {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Transaction {
-    from: String,   //发送方地址（公钥）  公钥的十六位置字符串，需要解码
-    to: String,     //接收方地址
-    amount: u64,    //转账金额
-    timestamp: u64, // 时间戳（防重放）
+    pub from: String,   //发送方地址（公钥）  公钥的十六位置字符串，需要解码
+    pub to: String,     //接收方地址
+    pub amount: u64,    //转账金额
+    pub timestamp: u64, // 时间戳（防重放）
+    pub fee:u64,  //手续费
 
     #[serde(with = "signature_serde")]
-    signature: Signature, // Ed25519 签名（证明身份）
+    pub signature: Signature, // Ed25519 签名（证明身份）
+
+    pub hash:String
 }
 
 // 交易的创建与签名
@@ -47,56 +53,63 @@ pub struct Transaction {
 impl Transaction {
     ///创建新交易，自动签名
     /// 参数：发送方私钥，接收方地址，金额
-    fn new(signing_key: &SigningKey,to:&str,amount:u64) -> Self {
+    pub fn new(signing_key: &SigningKey, to: &str, amount: u64 ) -> Self {
         //获取发送方地址（公钥）
         let from = hex::encode(signing_key.verifying_key().as_bytes());
         let to = to.to_string();
         let timestamp = Self::current_timestamp();
+        let fee = amount / FEE_RATE;
 
         //计算交易hash,不包含签名
-        let tx_hash = Self::calculate_hash(&from, &to, amount, timestamp);
+        let tx_hash = Self::calculate_hash(&from, &to, amount, timestamp ,fee);
 
         //用私钥签名hash
         let signature = signing_key.sign(tx_hash.as_bytes());
 
-        Transaction{
+
+        Transaction {
             from,
             to,
             amount,
             timestamp,
-            signature
+            fee,
+            signature,
+            hash:tx_hash
         }
-
     }
 
     //计算当前时间戳
-    fn current_timestamp() -> u64 {
+    pub fn current_timestamp() -> u64 {
         use std::time::SystemTime;
-        SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs()
+        SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
     }
 
     //计算交易Hash 用于签名
-    fn calculate_hash(from: &str, to: &str, amount: u64, timestamp: u64) -> String {
-        let input = format!("{}{}{}{}", from, to, amount,timestamp);
+    pub fn calculate_hash(from: &str, to: &str, amount: u64, timestamp: u64,fee: u64) -> String {
+        let input = format!("{}{}{}{}{}", from, to, amount, timestamp,fee);
         hex::encode(Sha256::digest(input.as_bytes()))
     }
 }
 
 ///交易验证
 impl Transaction {
-    fn verify_signature(&self) -> bool {
+    pub fn verify_signature(&self) -> bool {
         //拿到公钥
-        
-        //解码拿到公钥字符串数组
+
+        //解码拿到公钥字符串数组 encode转码 decode解码
         let public_key_arr = hex::decode(&self.from).unwrap().try_into().unwrap();
         //从字符串数组获取公钥 调用Ed25519的VerifyingKey::from_bytes
         let verifying_key = VerifyingKey::from_bytes(&public_key_arr).unwrap();
 
         //重新计算交易hash
-        let tx_hash = Transaction::calculate_hash(&self.from, &self.to, self.amount, self.timestamp);
+        let tx_hash =
+            Transaction::calculate_hash(&self.from, &self.to, self.amount, self.timestamp,self.fee);
         //验证签名
-        verifying_key.verify(tx_hash.as_bytes(),&self.signature).is_ok()
+        verifying_key
+            .verify(tx_hash.as_bytes(), &self.signature)
+            .is_ok()
     }
 }
-
-
