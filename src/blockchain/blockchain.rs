@@ -110,7 +110,7 @@ impl BlockChain {
     pub fn total_data_size(&self) -> usize {
         self.chain
             .iter()
-            .fold(0, |acc, x| acc + x.transactions.len())
+            .fold(0, |acc, x| acc + x.block_body.transactions.len())
     }
 }
 
@@ -204,24 +204,24 @@ impl BlockChain {
         for i in 1..self.chain.len() {
             //检查：1 区块哈希是否正确
             let current_block = &self.chain[i];
-            if !current_block.hash.eq(&Block::calculate_hash_with_nonce(
-                current_block.index,
-                current_block.timestamp,
-                &current_block.transactions,
-                &current_block.prev_hash.to_string(),
-                current_block.nonce,
-                &current_block.miner,
+            if !current_block.hash.eq(&Block::calculate_hash(
+                current_block.block_header.index,
+                current_block.block_header.timestamp,
+                &current_block.block_header.merkle,
+                &current_block.block_header.prev_hash.to_string(),
+                current_block.block_header.nonce,
+                &current_block.block_header.miner,
             )) {
                 return false;
             }
 
             //检查：2 链接是否正确 prev_hash指向前一个区块的hash
-            if !current_block.prev_hash.eq(&self.chain[i - 1].hash) {
+            if !current_block.block_header.prev_hash.eq(&self.chain[i - 1].hash) {
                 return false;
             }
 
             //检查：3 所有交易签名是否有效
-            for (j, tx) in current_block.transactions.iter().enumerate() {
+            for (j, tx) in current_block.block_body.transactions.iter().enumerate() {
                 // CoinBase不需要验签
                 if tx.from.eq("coinbase") {
                     continue;
@@ -229,7 +229,7 @@ impl BlockChain {
 
                 //list带索引迭代器
                 if !tx.verify_signature() {
-                    println!("区块 {} 的第 {} 笔交易签名无效", current_block.index, j);
+                    println!("区块 {} 的第 {} 笔交易签名无效", current_block.block_header.index, j);
                     return false;
                 }
             }
@@ -243,7 +243,7 @@ impl BlockChain {
         let mut trans_history = Vec::new();
 
         for x in self.chain.iter() {
-            for j in x.transactions.iter() {
+            for j in x.block_body.transactions.iter() {
                 if j.from.eq(address) || j.to.eq(address) {
                     trans_history.push(j)
                 }
