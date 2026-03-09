@@ -3,7 +3,9 @@
 pub mod block;          // → 对应 src/blockchain/block.rs
 pub mod transaction;    // → 对应 src/blockchain/transaction.rs
 pub mod blockchain;          // → 对应 src/blockchain/chain.rs
-pub mod account;        // → 对应 src/blockchain/account.rs
+pub mod account;
+mod merkel;
+// → 对应 src/blockchain/account.rs
 
 // 可以在这里 re-export（重新导出），让外部使用更方便
 // pub use 的作用：让外部可以直接 use blockchain::Block，而不需要 use blockchain::block::Block
